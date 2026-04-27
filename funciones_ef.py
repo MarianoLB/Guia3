@@ -4,14 +4,14 @@ Funciones para FEM
 """
 import numpy as np
 
-def k_elemental(MC,MN,gl):
+def k_elemental(MC,MN,gl,elemento='barra'):
     
     nxel = len(MC[0])
     x = np.zeros([len(MC), nxel])
     y = np.zeros([len(MC), nxel])
     L = np.zeros(len(MC))
 
-    if gl==1:
+    if elemento=="barra": #barra axial 1D
         kel = np.zeros([len(MC), nxel*gl, nxel*gl])   # una kel por elemento
         for e in range(len(MC)):
             for i in range(len(MC[e])):
@@ -25,7 +25,8 @@ def k_elemental(MC,MN,gl):
                 
                 kel[e][np.abs(kel[e]) < 1e-10] = 0    
     
-    elif gl==2:
+    elif elemento=="puente": #barras 2D con cosenos y senos
+        #viga con dy y phi
         nxel = len(MC[0])
         ang = np.zeros(len(MC))
         L = np.zeros(len(MC))
@@ -44,9 +45,26 @@ def k_elemental(MC,MN,gl):
                                    [-c**2, -c*s,   c**2,    c*s],  [-c*s,  -s**2,  c*s,    s**2]])
 
             kel[e][np.abs(kel[e]) < 1e-10] = 0
-
+    
+    elif elemento=="viga":
+        kel=np.zeros([len(MC),nxel*gl,nxel*gl])
+        
+        for e in range(len(MC)):
+            for i in range(len(MC[e])):
+                x[e,i]=MN[MC[e,i],0]
+                y[e,i]=MN[MC[e,i],1]
+            
+            L[e]=np.sqrt((x[e,1]-x[e,0])**2+(y[e,1]-y[e,0])**2)
+            Le=L[e]
+            
+            kel[e]=np.array([[12,6*Le,-12,6*Le],
+                             [6*Le,4*Le**2,-6*Le,2*Le**2],
+                             [-12,-6*Le,12,-6*Le],
+                             [6*Le,2*Le**2,-6*Le,4*Le**2]])
+            
+            kel[e][np.abs(kel[e])<1e-10]=0
+    
     return kel,L
-
 #-----------------------------------------------------------------------
 def k_global(MC, MN, gl, kel):
     kglob = np.zeros([gl*len(MN), gl*len(MN)])
